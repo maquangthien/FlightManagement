@@ -4,75 +4,92 @@ from app import db
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 
-
 class Role(db.Model):
+    __tablename__ = 'role'
     role_id = Column(Integer, primary_key=True, autoincrement=True)
     role_name = Column(String(50), nullable=False, unique=True)
 
     def __str__(self):
         return self.role_name
 
-
-class User(db.Model, UserMixin):
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(50), nullable=False)
-    phone = Column(String(20), nullable=True)
-    email = Column(String(50), nullable=True, unique=True)
-    identity = Column(String(20), nullable=True)
-    _password = Column(String(100), nullable=False)
+class User(db.Model):
+    __tablename__ = 'user'
+    user_id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String(50), nullable=False, unique=True)
+    password = Column(String(50), nullable=False)
     role_id = Column(Integer, ForeignKey('role.role_id'), nullable=False)
-    role = relationship(Role)
-    tickets = relationship('Ticket', backref='passenger', lazy=True)
+    role = relationship('Role', backref='users')
 
-    def __str__(self):
-        return self.name
+class Customer(db.Model):
+    __tablename__ = 'customer'
+    customer_id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey('user.user_id'), nullable=False, unique=True)
+    customer_name = Column(String(100), nullable=False)
+    cmnd_cccd = Column(String(20), nullable=False, unique=True)
+    phone = Column(String(15), nullable=False)
 
-    @property
-    def password(self):
-        raise AttributeError('Password is not a readable attribute.')
+class TicketType(db.Model):
+    __tablename__ = 'ticket_type'
+    ticket_type_id = Column(Integer, primary_key=True, autoincrement=True)
+    type_name = Column(String(50), nullable=False, unique=True)
+    class_name = Column(String(20), nullable=False)
 
-    @password.setter
-    def password(self, plaintext_password):
-        self._password = generate_password_hash(plaintext_password)
+class Seat(db.Model):
+    __tablename__ = 'seat'
+    seat_id = Column(Integer, primary_key=True, autoincrement=True)
+    seat_number = Column(String(10), nullable=False, unique=True)
+    class_name = Column(String(20), nullable=False)
+    status = Column(String(20), nullable=False)
 
-    def check_password(self, plaintext_password):
-        return check_password_hash(self._password, plaintext_password)
-
-
-class Airport(db.Model):
-    airport_code = Column(String(3), primary_key=True)
-    airport_name = Column(String(50), nullable=False, unique=True)
-    airport_location = Column(String(50), nullable=False, unique=True)
-
-    def __str__(self):
-        return self.airport_name
-
+class FlightRoute(db.Model):
+    __tablename__ = 'flight_route'
+    route_id = Column(Integer, primary_key=True, autoincrement=True)
+    source_airport_id = Column(Integer, ForeignKey('airport.airport_id'), nullable=False)
+    destination_airport_id = Column(Integer, ForeignKey('airport.airport_id'), nullable=False)
+    distance = Column(Float, nullable=False)
+    duration = Column(Integer, nullable=False)
 
 class Flight(db.Model):
+    __tablename__ = 'flight'
     flight_id = Column(Integer, primary_key=True, autoincrement=True)
-    departure_datetime = Column(DateTime, nullable=False)
-    flight_duration = Column(Integer, nullable=False)
-    available_seats_first_class = Column(Integer, nullable=False)
-    available_seats_second_class = Column(Integer, nullable=False)
-    tickets = relationship('Ticket', backref='flight', lazy=True)
+    route_id = Column(Integer, ForeignKey('flight_route.route_id'), nullable=False)
+    flight_number = Column(String(20), nullable=False, unique=True)
+    aircraft_type = Column(String(50), nullable=False)
+    total_seats_h1 = Column(Integer, nullable=False)
+    total_seats_h2 = Column(Integer, nullable=False)
+    departure_date_time = Column(DateTime, nullable=False)
+    arrival_date_time = Column(DateTime, nullable=False)
 
+class Airport(db.Model):
+    __tablename__ = 'airport'
+    airport_id = Column(Integer, primary_key=True, autoincrement=True)
+    airport_name = Column(String(100), nullable=False, unique=True)
+    location = Column(String(100), nullable=False)
 
-class IntermediateAirport(db.Model):
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    airport_code = Column(String(3), ForeignKey('airport.airport_code'), nullable=False)
+class FlightSchedule(db.Model):
+    __tablename__ = 'flight_schedule'
+    schedule_id = Column(Integer, primary_key=True, autoincrement=True)
     flight_id = Column(Integer, ForeignKey('flight.flight_id'), nullable=False)
-    stop_order = Column(Integer, nullable=False)
-    stop_duration = Column(Integer, nullable=False)
-
+    stopover_airport_id = Column(Integer, ForeignKey('airport.airport_id'))
+    stopover_duration = Column(Integer, nullable=False)
+    note = Column(String(255))
 
 class Ticket(db.Model):
+    __tablename__ = 'ticket'
     ticket_id = Column(Integer, primary_key=True, autoincrement=True)
     flight_id = Column(Integer, ForeignKey('flight.flight_id'), nullable=False)
-    passenger_id = Column(Integer, ForeignKey('user.id'), nullable=False)
-    ticket_class = Column(String(20), nullable=False)
-    ticket_price = Column(Float, nullable=False)
-    booking_time = Column(DateTime, nullable=False)
+    customer_id = Column(Integer, ForeignKey('customer.customer_id'), nullable=False)
+    ticket_type_id = Column(Integer, ForeignKey('ticket_type.ticket_type_id'), nullable=False)
+    seat_id = Column(Integer, ForeignKey('seat.seat_id'), nullable=False)
+    price = Column(Float, nullable=False)
+    status = Column(String(20), nullable=False)
 
+class History(db.Model):
+    __tablename__ = 'history'
+    history_id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey('user.user_id'), nullable=False)
+    action = Column(String(255), nullable=False)
+    timestamp = Column(DateTime, nullable=False)
 
 if __name__ == "__main__":
     from app import app

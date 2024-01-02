@@ -1,0 +1,57 @@
+{% extends 'layout/base.html' %}
+
+{% block content %}
+<div class="container">
+    <h1 class="text-center my-4" style="font-weight: 600; text-shadow: 3px 3px 5px grey; color: #394353">Đăng kí người
+        dùng</h1>
+
+    {% if err_msg %}
+    <div class="alert alert-danger">
+        {{ err_msg }}
+    </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" action="/register">
+        <div class="form-floating mb-3 mt-3">
+            <input type="text" class="form-control" required id="name" placeholder="Nhập họ tên" name="name">
+            <label for="name">Họ tên</label>
+        </div>
+
+        <div class="form-floating mb-3 mt-3">
+            <input type="text" class="form-control" required id="username" placeholder="Nhập tên đăng nhập"
+                   name="username">
+            <label for="username">Tên đăng nhập</label>
+        </div>
+
+        <div class="form-floating mt-3 mb-3">
+            <input type="password" class="form-control" required id="pwd" placeholder="Nhập mật khẩu" name="password">
+            <label for="pwd">Mật khẩu</label>
+        </div>
+
+        <div class="form-floating mt-3 mb-3">
+            <input type="password" class="form-control" id="confirmPwd" required placeholder="Nhập xác nhận mật khẩu"
+                   name="confirm">
+            <label for="confirmPwd">Xác nhận mật khẩu</label>
+        </div>
+        <div class="form-floating mt-3 mb-3">
+            <input type="text" class="form-control" id="phone" required placeholder="Số điện thoại"
+                   name="confirm">
+            <label for="phone">Số điện thoại</label>
+        </div>
+        <div class="form-floating mt-3 mb-3">
+            <input type="text" class="form-control" id="cccd" required placeholder="CCCD"
+                   name="confirm">
+            <label for="cccd">CCCD</label>
+        </div>
+        <div class="form-floating mt-3 mb-3">
+            <input type="text" class="form-control" id="email" required placeholder="Email"
+                   name="confirm">
+            <label for="email">Email</label>
+        </div>
+        <div class="form-floating mt-3 mb-3  text-center">
+            <div><input type="submit" class="btn btn-danger" value="Đăng ký"></div>
+            <div><p class="p-center">Đã có tài khoản? <a href="#">Đăng nhập</a></p></div>
+        </div>
+    </form>
+</div>
+{% endblock %}
