@@ -1,110 +1,158 @@
+from datetime import datetime
 from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from app import db
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 
-class Role(db.Model):
-    __tablename__ = 'role'
-    role_id = Column(Integer, primary_key=True, autoincrement=True)
-    role_name = Column(String(50), nullable=False, unique=True)
 
-    def __str__(self):
-        return self.role_name
+class Permission(db.Model):
+    __tablename__ = 'permission'
+    permission_id = db.Column(db.Integer, primary_key=True)
+    permission_name = db.Column(db.String(255), nullable=False)
+    permission_details = db.relationship('PermissionDetails', backref='permission', lazy=True)
 
-class User(db.Model):
+
+class Position(db.Model):
+    __tablename__ = 'position'
+    position_id = db.Column(db.Integer, primary_key=True)
+    position_name = db.Column(db.String(255), nullable=False)
+    permission_details = db.relationship('PermissionDetails', backref='position', lazy=True)
+
+
+class PermissionDetails(db.Model):
+    __tablename__ = 'permissionDetails'
+    id = db.Column(db.Integer, primary_key=True)
+    position_id = db.Column(db.Integer, db.ForeignKey('position.position_id'), nullable=False)
+    permission_id = db.Column(db.Integer, db.ForeignKey('permission.permission_id'), nullable=False)
+    position = db.relationship('Position', backref='permission_details')
+    permission = db.relationship('Permission', backref='permission_details')
+
+
+class User(db.Model, UserMixin):
     __tablename__ = 'user'
-    user_id = Column(Integer, primary_key=True, autoincrement=True)
-    username = Column(String(50), nullable=False, unique=True)
-    password = Column(String(50), nullable=False)
-    role_id = Column(Integer, ForeignKey('role.role_id'), nullable=False)
-    role = relationship('Role', backref='users')
+    user_id = db.Column(db.Integer, primary_key=True)
+    user_name = db.Column(db.String(255), nullable=False)
+    dob = db.Column(db.DateTime, nullable=True)
+    gender = db.Column(db.String(10), nullable=True)
+    phone = db.Column(db.String(20), nullable=True)
+    identity = db.Column(db.String(20), nullable=True)
+    nationality = db.Column(db.String(50), nullable=True)
+    position_id = db.Column(db.Integer, db.ForeignKey('position.position_id'), nullable=True)
+    position = db.relationship('Position', backref='users')
+    account = db.relationship('Account', backref='user', lazy=True)
+    permission_details = db.relationship('PermissionDetails', backref='user')
 
-class Customer(db.Model):
-    __tablename__ = 'customer'
-    customer_id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey('user.user_id'), nullable=False, unique=True)
-    customer_name = Column(String(100), nullable=False)
-    cmnd_cccd = Column(String(20), nullable=False, unique=True)
-    phone = Column(String(15), nullable=False)
+
+class Account(db.Model):
+    __tablename__ = 'account'
+    account_id = db.Column(db.Integer, primary_key=True)
+    user_name = db.Column(db.String(255), nullable=False)
+    password = db.Column(db.String(255), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.user_id'), nullable=False)
+
 
 class TicketType(db.Model):
-    __tablename__ = 'ticket_type'
-    ticket_type_id = Column(Integer, primary_key=True, autoincrement=True)
-    type_name = Column(String(50), nullable=False, unique=True)
-    class_name = Column(String(20), nullable=False)
+    __tablename__ = 'ticketType'
+    ticket_type_id = db.Column(db.Integer, primary_key=True)
+    type_name = db.Column(db.String(255), nullable=False)
+    fare = db.Column(db.Float, nullable=False)
 
-class Seat(db.Model):
-    __tablename__ = 'seat'
-    seat_id = Column(Integer, primary_key=True, autoincrement=True)
-    seat_number = Column(String(10), nullable=False, unique=True)
-    class_name = Column(String(20), nullable=False)
-    status = Column(String(20), nullable=False)
-
-class FlightRoute(db.Model):
-    __tablename__ = 'flight_route'
-    route_id = Column(Integer, primary_key=True, autoincrement=True)
-    source_airport_id = Column(Integer, ForeignKey('airport.airport_id'), nullable=False)
-    destination_airport_id = Column(Integer, ForeignKey('airport.airport_id'), nullable=False)
-    distance = Column(Float, nullable=False)
-    duration = Column(Integer, nullable=False)
-
-class Flight(db.Model):
-    __tablename__ = 'flight'
-    flight_id = Column(Integer, primary_key=True, autoincrement=True)
-    route_id = Column(Integer, ForeignKey('flight_route.route_id'), nullable=False)
-    flight_number = Column(String(20), nullable=False, unique=True)
-    aircraft_type = Column(String(50), nullable=False)
-    total_seats_h1 = Column(Integer, nullable=False)
-    total_seats_h2 = Column(Integer, nullable=False)
-    departure_date_time = Column(DateTime, nullable=False)
-    arrival_date_time = Column(DateTime, nullable=False)
-
-class Airport(db.Model):
-    __tablename__ = 'airport'
-    airport_id = Column(Integer, primary_key=True, autoincrement=True)
-    airport_name = Column(String(100), nullable=False, unique=True)
-    location = Column(String(100), nullable=False)
-
-class FlightSchedule(db.Model):
-    __tablename__ = 'flight_schedule'
-    schedule_id = Column(Integer, primary_key=True, autoincrement=True)
-    flight_id = Column(Integer, ForeignKey('flight.flight_id'), nullable=False)
-    stopover_airport_id = Column(Integer, ForeignKey('airport.airport_id'))
-    stopover_duration = Column(Integer, nullable=False)
-    note = Column(String(255))
 
 class Ticket(db.Model):
     __tablename__ = 'ticket'
-    ticket_id = Column(Integer, primary_key=True, autoincrement=True)
-    flight_id = Column(Integer, ForeignKey('flight.flight_id'), nullable=False)
-    customer_id = Column(Integer, ForeignKey('customer.customer_id'), nullable=False)
-    ticket_type_id = Column(Integer, ForeignKey('ticket_type.ticket_type_id'), nullable=False)
-    seat_id = Column(Integer, ForeignKey('seat.seat_id'), nullable=False)
-    price = Column(Float, nullable=False)
-    status = Column(String(20), nullable=False)
+    ticket_id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.user_id'), nullable=False)
+    user = db.relationship('User', backref='tickets')
+    flight_id = db.Column(db.Integer, db.ForeignKey('flight.flight_id'), nullable=False)
+    flight = db.relationship('Flight', backref='tickets')
+    ticket_type_id = db.Column(db.Integer, db.ForeignKey('ticketType.ticket_type_id'), nullable=False)
+    ticket_type = db.relationship('TicketType', backref='tickets')
+    status = db.Column(db.String(50), nullable=True)
 
-class History(db.Model):
-    __tablename__ = 'history'
-    history_id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey('user.user_id'), nullable=False)
-    action = Column(String(255), nullable=False)
-    timestamp = Column(DateTime, nullable=False)
+
+class Invoice(db.Model):
+    invoice_id = db.Column(db.Integer, primary_key=True)
+    invoice_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+
+class Flight(db.Model):
+    __tablename__ = 'flight'
+    flight_id = db.Column(db.Integer, primary_key=True)
+    plan_id = db.Column(db.Integer, db.ForeignKey('plan.plan_id'), nullable=False)
+    plan = db.relationship('Plan', backref='flights')
+    flight_number = db.Column(db.String(50), nullable=False)
+    departure_date_time = db.Column(db.DateTime, nullable=False)
+    arrival_date_time = db.Column(db.DateTime, nullable=False)
+    flight_status = db.Column(db.String(50), nullable=True)
+    flight_route_id = db.Column(db.Integer, db.ForeignKey('flight_route.flight_route_id'), nullable=False)
+    flight_route = db.relationship('FlightRoute', backref='flights')
+
+
+class Plan(db.Model):
+    plan_id = db.Column(db.Integer, primary_key=True)
+    aircraft_name = db.Column(db.String(255), nullable=False)
+    aircraft_type = db.Column(db.String(50), nullable=False)
+    aircraft_cabin = db.Column(db.String(50), nullable=False)
+    total_seats_h1 = db.Column(db.Integer, nullable=False)
+    total_seats_h2 = db.Column(db.Integer, nullable=False)
+    status = db.Column(db.String(50), nullable=True)
+
+    airline_id = db.Column(db.Integer, db.ForeignKey('airline.airline_id'), nullable=False)
+    airline = db.relationship('Airline', backref='plans')
+
+    flights = db.relationship('Flight', backref='plan', lazy=True)
+
+
+class Seat(db.Model):
+    seat_id = db.Column(db.Integer, primary_key=True)
+    seat_number = db.Column(db.String(10), nullable=False)
+    class_seat = db.Column(db.String(20), nullable=False)
+    status = db.Column(db.String(50), nullable=True)
+    plan_id = db.Column(db.Integer, db.ForeignKey('plan.plan_id'), nullable=False)
+    plan = db.relationship('Plan', backref='seats')
+
+
+class Airport(db.Model):
+    airport_code = db.Column(db.String(3), primary_key=True)
+    airport_name = db.Column(db.String(255), nullable=False)
+    airport_location = db.Column(db.String(255), nullable=False)
+
+    flightroutedetails = db.relationship('FlightRouteDetails', backref='airport')
+
+
+class FlightRoute(db.Model):
+    flight_route_id = db.Column(db.Integer, primary_key=True)
+    departure_airport = db.Column(db.String(50), nullable=False)
+    destination_airport = db.Column(db.String(50), nullable=False)
+    duration = db.Column(db.String(50), nullable=True)
+    distance = db.Column(db.Float, nullable=True)
+
+    flightroutedetails = db.relationship('FlightRouteDetails', backref='flight_route')
+
+
+class FlightRouteDetails(db.Model):
+    flightroutedetails_id = db.Column(db.Integer, primary_key=True)
+    airport_code = db.Column(db.String(3), db.ForeignKey('airport.airport_code'), nullable=False)
+    flight_route_id = db.Column(db.Integer, db.ForeignKey('flight_route.flight_route_id'), nullable=False)
+    airport_name = db.Column(db.String(255), nullable=False)
+    intermediate_airport = db.Column(db.Boolean, nullable=False)
+    duration = db.Column(db.String(50), nullable=True)
+    note = db.Column(db.String(255), nullable=True)
+
+    airport = db.relationship('Airport', backref='flightroutedetails')
+    flight_route = db.relationship('FlightRoute', backref='flightroutedetails')
+
+
+class Airline(db.Model):
+    airline_id = db.Column(db.Integer, primary_key=True)
+    airline_name = db.Column(db.String(255), nullable=False)
+
+    plans = db.relationship('Plan', backref='airline', lazy=True)
+
 
 if __name__ == "__main__":
     from app import app
 
     with app.app_context():
         db.create_all()
-        # Thêm dữ liệu mẫu hoặc các thao tác khác ở đây nếu cần.
-
-        # admin_role = Role(role_name='admin')
-        # staff_role = Role(role_name='staff')
-        # customer_role = Role(role_name='customer')
-        #
-        # db.session.add_all([admin_role, staff_role, customer_role])
-
-        # f1 = Ariport(airport_code='SGN', airport_name='Sân bay Tân Sân Nhất', airport_location='TP HCM')
-        # f2 = Ariport(airport_code='HAN', airport_name='Sân bay quốc tế Nội Bài', airport_location='Hà Nội')
-        # db.session.add_all([f1, f2])
-        # db.session.commit()
