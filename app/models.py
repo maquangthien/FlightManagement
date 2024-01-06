@@ -1,158 +1,174 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Boolean
 from sqlalchemy.orm import relationship
 from app import db
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
+from app import app
+from sqlalchemy import ForeignKeyConstraint
+class Account(db.Model):
+    __tablename__ = 'account'
+    id = Column(Integer, primary_key=True)
+    username = Column(String(50), unique=True, nullable=False)
+    password_hash = Column(String(50), nullable=False)
+    user_id = Column(Integer, ForeignKey('user.id'))
+    user = relationship('User', back_populates='account')
 
+# Trong class User
+class User(db.Model):
+    __tablename__ = 'user'
+    id = Column(Integer, primary_key=True)
+    name = Column(String(50), nullable=False)
+    dob = db.Column(DateTime, nullable=True)
+    phone = db.Column(db.String(20), nullable=True)
+    citizen_identity_card= db.Column(db.String(20), nullable=True)
+    account = relationship('Account', back_populates='user', uselist=False)
+    permissions = relationship('Permission', back_populates='user')
+    tickets = relationship('Ticket', back_populates='user')
 
 class Permission(db.Model):
     __tablename__ = 'permission'
-    permission_id = db.Column(db.Integer, primary_key=True)
-    permission_name = db.Column(db.String(255), nullable=False)
-    permission_details = db.relationship('PermissionDetails', backref='permission', lazy=True)
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('user.id'))
+    permission_details = relationship('PermissionDetails', back_populates='permission')
+    user = relationship('User', back_populates='permissions')
 
+class PermissionDetails(db.Model):
+    __tablename__ = 'permission_details'
+    id = Column(Integer, primary_key=True)
+    permission_id = Column(Integer, ForeignKey('permission.id'))
+    position_id = Column(Integer, ForeignKey('position.id'))
+    permission = relationship('Permission', back_populates='permission_details')
+    position = relationship('Position', back_populates='permission_details')
 
 class Position(db.Model):
     __tablename__ = 'position'
-    position_id = db.Column(db.Integer, primary_key=True)
-    position_name = db.Column(db.String(255), nullable=False)
-    permission_details = db.relationship('PermissionDetails', backref='position', lazy=True)
-
-
-class PermissionDetails(db.Model):
-    __tablename__ = 'permissionDetails'
-    id = db.Column(db.Integer, primary_key=True)
-    position_id = db.Column(db.Integer, db.ForeignKey('position.position_id'), nullable=False)
-    permission_id = db.Column(db.Integer, db.ForeignKey('permission.permission_id'), nullable=False)
-    position = db.relationship('Position', backref='permission_details')
-    permission = db.relationship('Permission', backref='permission_details')
-
-
-class User(db.Model, UserMixin):
-    __tablename__ = 'user'
-    user_id = db.Column(db.Integer, primary_key=True)
-    user_name = db.Column(db.String(255), nullable=False)
-    dob = db.Column(db.DateTime, nullable=True)
-    gender = db.Column(db.String(10), nullable=True)
-    phone = db.Column(db.String(20), nullable=True)
-    identity = db.Column(db.String(20), nullable=True)
-    nationality = db.Column(db.String(50), nullable=True)
-    position_id = db.Column(db.Integer, db.ForeignKey('position.position_id'), nullable=True)
-    position = db.relationship('Position', backref='users')
-    account = db.relationship('Account', backref='user', lazy=True)
-    permission_details = db.relationship('PermissionDetails', backref='user')
-
-
-class Account(db.Model):
-    __tablename__ = 'account'
-    account_id = db.Column(db.Integer, primary_key=True)
-    user_name = db.Column(db.String(255), nullable=False)
-    password = db.Column(db.String(255), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.user_id'), nullable=False)
-
+    id = Column(Integer, primary_key=True)
+    name = Column(String(50))
+    permission_details = relationship('PermissionDetails', back_populates='position')
 
 class TicketType(db.Model):
-    __tablename__ = 'ticketType'
-    ticket_type_id = db.Column(db.Integer, primary_key=True)
-    type_name = db.Column(db.String(255), nullable=False)
-    fare = db.Column(db.Float, nullable=False)
-
+    __tablename__ = 'ticket_type'
+    id = Column(Integer, primary_key=True)
+    name = Column(String(50), nullable=False)
+    tickets = relationship('Ticket', back_populates='type')
 
 class Ticket(db.Model):
     __tablename__ = 'ticket'
-    ticket_id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.user_id'), nullable=False)
-    user = db.relationship('User', backref='tickets')
-    flight_id = db.Column(db.Integer, db.ForeignKey('flight.flight_id'), nullable=False)
-    flight = db.relationship('Flight', backref='tickets')
-    ticket_type_id = db.Column(db.Integer, db.ForeignKey('ticketType.ticket_type_id'), nullable=False)
-    ticket_type = db.relationship('TicketType', backref='tickets')
-    status = db.Column(db.String(50), nullable=True)
-
-
-class Invoice(db.Model):
-    invoice_id = db.Column(db.Integer, primary_key=True)
-    invoice_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+    flight_id = Column(Integer, ForeignKey('flight.id'), nullable=False)
+    type_id = Column(Integer, ForeignKey('ticket_type.id'), nullable=False)
+    user = relationship('User', back_populates='tickets')
+    flight = relationship('Flight', back_populates='tickets')
+    type = relationship('TicketType', back_populates='tickets')
 
 class Flight(db.Model):
     __tablename__ = 'flight'
-    flight_id = db.Column(db.Integer, primary_key=True)
-    plan_id = db.Column(db.Integer, db.ForeignKey('plan.plan_id'), nullable=False)
-    plan = db.relationship('Plan', backref='flights')
-    flight_number = db.Column(db.String(50), nullable=False)
-    departure_date_time = db.Column(db.DateTime, nullable=False)
-    arrival_date_time = db.Column(db.DateTime, nullable=False)
-    flight_status = db.Column(db.String(50), nullable=True)
-    flight_route_id = db.Column(db.Integer, db.ForeignKey('flight_route.flight_route_id'), nullable=False)
-    flight_route = db.relationship('FlightRoute', backref='flights')
+    id = Column(Integer, primary_key=True)
+    departure_location = Column(String(50), nullable=False)
+    destination_location = Column(String(50), nullable=False)
+    departure_time = Column(DateTime, nullable=False, default=datetime.utcnow)
+    tickets = relationship('Ticket', back_populates='flight')
+    route_id = Column(Integer, ForeignKey('routes.id'), nullable=False)
+    route = relationship('Routes', back_populates='flights')
+    details = relationship('FlightDetails', back_populates='flight')
+    airplane_id = Column(Integer, ForeignKey('airplane.id'), nullable=False)
+    airplane = relationship('Airplane', back_populates='flights')
 
-
-class Plan(db.Model):
-    plan_id = db.Column(db.Integer, primary_key=True)
-    aircraft_name = db.Column(db.String(255), nullable=False)
-    aircraft_type = db.Column(db.String(50), nullable=False)
-    aircraft_cabin = db.Column(db.String(50), nullable=False)
-    total_seats_h1 = db.Column(db.Integer, nullable=False)
-    total_seats_h2 = db.Column(db.Integer, nullable=False)
-    status = db.Column(db.String(50), nullable=True)
-
-    airline_id = db.Column(db.Integer, db.ForeignKey('airline.airline_id'), nullable=False)
-    airline = db.relationship('Airline', backref='plans')
-
-    flights = db.relationship('Flight', backref='plan', lazy=True)
-
-
-class Seat(db.Model):
-    seat_id = db.Column(db.Integer, primary_key=True)
-    seat_number = db.Column(db.String(10), nullable=False)
-    class_seat = db.Column(db.String(20), nullable=False)
-    status = db.Column(db.String(50), nullable=True)
-    plan_id = db.Column(db.Integer, db.ForeignKey('plan.plan_id'), nullable=False)
-    plan = db.relationship('Plan', backref='seats')
-
-
-class Airport(db.Model):
-    airport_code = db.Column(db.String(3), primary_key=True)
-    airport_name = db.Column(db.String(255), nullable=False)
-    airport_location = db.Column(db.String(255), nullable=False)
-
-    flightroutedetails = db.relationship('FlightRouteDetails', backref='airport')
-
-
-class FlightRoute(db.Model):
-    flight_route_id = db.Column(db.Integer, primary_key=True)
-    departure_airport = db.Column(db.String(50), nullable=False)
-    destination_airport = db.Column(db.String(50), nullable=False)
-    duration = db.Column(db.String(50), nullable=True)
-    distance = db.Column(db.Float, nullable=True)
-
-    flightroutedetails = db.relationship('FlightRouteDetails', backref='flight_route')
-
-
-class FlightRouteDetails(db.Model):
-    flightroutedetails_id = db.Column(db.Integer, primary_key=True)
-    airport_code = db.Column(db.String(3), db.ForeignKey('airport.airport_code'), nullable=False)
-    flight_route_id = db.Column(db.Integer, db.ForeignKey('flight_route.flight_route_id'), nullable=False)
-    airport_name = db.Column(db.String(255), nullable=False)
-    intermediate_airport = db.Column(db.Boolean, nullable=False)
-    duration = db.Column(db.String(50), nullable=True)
-    note = db.Column(db.String(255), nullable=True)
-
-    airport = db.relationship('Airport', backref='flightroutedetails')
-    flight_route = db.relationship('FlightRoute', backref='flightroutedetails')
-
+class Routes(db.Model):
+    __tablename__ = 'routes'
+    id = Column(Integer, primary_key=True)
+    origin = Column(String(50), nullable=False)
+    destination = Column(String(50), nullable=False)
+    flights = relationship('Flight', back_populates='route')
 
 class Airline(db.Model):
-    airline_id = db.Column(db.Integer, primary_key=True)
-    airline_name = db.Column(db.String(255), nullable=False)
+    __tablename__ = 'airline'
+    id = Column(Integer, primary_key=True)
+    code = Column(String(10), nullable=False, unique=True)
+    name = Column(String(50), nullable=False, unique=True)
+    airplanes = relationship('Airplane', back_populates='airline')
 
-    plans = db.relationship('Plan', backref='airline', lazy=True)
+class Airport(db.Model):
+    __tablename__ = 'airport'
+    id = Column(Integer, primary_key=True)
+    code = Column(String(3), nullable=False, unique=True)
+    name = Column(String(50), nullable=False)
+    location = Column(String(50), nullable=False)
+    departures = relationship('FlightDetails', foreign_keys='FlightDetails.departure_airport_id', back_populates='departure_airport')
+    arrivals = relationship('FlightDetails', foreign_keys='FlightDetails.arrival_airport_id', back_populates='arrival_airport')
 
+class FlightDetails(db.Model):
+    __tablename__ = 'flight_details'
+    id = Column(Integer, primary_key=True)
+    flight_id = Column(Integer, ForeignKey('flight.id'), nullable=False)
+    departure_airport_id = Column(Integer, ForeignKey('airport.id'))
+    arrival_airport_id = Column(Integer, ForeignKey('airport.id'))
+
+    departure_airport = relationship('Airport', foreign_keys=[departure_airport_id], back_populates='departures')
+    arrival_airport = relationship('Airport', foreign_keys=[arrival_airport_id], back_populates='arrivals')
+
+    flight = relationship('Flight', back_populates='details')
+
+class Airplane(db.Model):
+    __tablename__ = 'airplane'
+    id = Column(Integer, primary_key=True)
+    name = Column(String(50), nullable=False, unique=True)
+    flights = relationship('Flight', back_populates='airplane')
+    seats = relationship('Seat', back_populates='airplane')
+    airline_id = Column(Integer, ForeignKey('airline.id'), nullable=False)
+    airline = relationship('Airline', back_populates='airplanes')
+
+class Seat(db.Model):
+    __tablename__ = 'seat'
+    id = Column(Integer, primary_key=True)
+    name = Column(String(10), nullable=False)
+    airplane_id = Column(Integer, ForeignKey('airplane.id'), nullable=False)
+    airplane = relationship('Airplane', back_populates='seats')
+
+    # Thêm foreign key constraint
+    ForeignKeyConstraint([airplane_id], ['airplane.id'])
 
 if __name__ == "__main__":
-    from app import app
-
     with app.app_context():
         db.create_all()
+
+        # # Tạo các chức vụ
+        # cv1 = Position(name="Admin")
+        # cv2 = Position(name="Employee")
+        # cv3 = Position(name="customer")
+        #
+        # db.session.add_all([cv1, cv2, cv3])
+        # db.session.commit()
+        #
+
+        ##tạo tài khoản
+
+
+        # # Tạo giá vé
+        # v1 = TicketType(name="Hạng 1")
+        # v2 = TicketType(name="Hạng 2")
+        # db.session.add_all([v1, v2])
+        # db.session.commit()
+        #
+        # #Tạo hãng máy bay
+        # h1= Airline(code="HVN", name = "Hãng hàng không Vietnam Airlines")
+        # h2= Airline(code="QH", name = "Hãng hàng không Bamboo Airways")
+        # h3= Airline(code="FWL", name = "Florida West International Airways")
+        # db.session.add_all([h1, h2, h3])
+        # db.session.commit()
+
+        ##Tạo sân bay
+        # sb1 = Airport(code="BMV",name="Sân bay Buôn Ma Thuột", location="Đắk Lắk")
+        # sb2 = Airport(code="DAD",name="Sân bay quốc tế Đà Nẵng	",location="Đà Nẵng")
+        # sb3 = Airport(code="HAN",name="Sân bay quốc tế Nội Bài	", location="Hà Nội	")
+        # sb4 = Airport(code="SGN",name="Sân bay quốc tế Tân Sơn Nhất", location="Thành phố Hồ Chí Minh")
+        # sb5 = Airport(code="CXR",name="Sân bay quốc tế Cam Ranh", location="Khánh Hòa")
+        # sb6 = Airport(code="PQC",name="Sân bay quốc tế Phú Quốc", location="Kiên Giang")
+        # sb7 = Airport(code="NGO",name="Sân bay quốc tế Chubu", location="Nagoya")
+        # sb8 = Airport(code="ICN",name="Sân bay quốc tế Incheon", location="Hàn Quốc")
+        # sb9 = Airport(code="LAX",name="Sân bay quốc tế Los Angeles", location="Los Angeles")
+        # sb10 = Airport(code="MVD",name="Sân bay quốc tế Carrasco", location="Montevideo")
+        # db.session.add_all([sb1, sb2,sb3, sb4, sb5, sb6, sb7, sb8, sb9, sb10])
+        # db.session.commit()
